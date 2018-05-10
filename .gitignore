@@ -3,3 +3,5 @@ data/*
 log/*
 *.swp
 *.swo
+*/__pycache__/*
+*.pyc
