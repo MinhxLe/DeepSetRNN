@@ -1,6 +1,7 @@
 .idea/*
 data/*
 log/*
+model/*
 *.swp
 *.swo
 */__pycache__/*
