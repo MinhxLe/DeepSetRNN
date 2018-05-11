@@ -8,7 +8,7 @@ import logging
 ####FLAGS####
 ap = argparse.ArgumentParser()
 #model args
-ap.add_argument('--name',type=str,default="RNN")
+ap.add_argument('--name',type=str,default="BasicRNN")
 ap.add_argument('--input_size',type=int,default=28)
 #TODO compute this or make it not static
 ap.add_argument('--timesteps',type=int,default=28) 
