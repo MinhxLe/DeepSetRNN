@@ -8,17 +8,20 @@ import logging
 ####FLAGS####
 ap = argparse.ArgumentParser()
 #model args
-ap.add_argument('--name',type=str,default="DeepSetRNN")
+ap.add_argument('--name',type=str,default="DeepsetRNN_mean_alpha_zero_init")
 ap.add_argument('--input_size',type=int,default=28)
 #TODO compute this or make it not static
 ap.add_argument('--timesteps',type=int,default=28) 
 ap.add_argument('--hidden_size',type=int,default=128)
 ap.add_argument('--output_size',type=int,default=10)
+#TODO add model type 
 #training args
+#TODO add initialization parameters
+#TODO add random seed
 ap.add_argument('--load',type=bool,default=False)
 ap.add_argument('--train',type=bool,default=True)
 ap.add_argument('--epoch',type=int,default=10)
-ap.add_argument('--batch_size',type=int,default=100)
+ap.add_argument('--batch_size',type=int,default=50)
 ap.add_argument('--save_freq',type=int,default=10)
 #hyperparameters
 ap.add_argument('--learning_rate',type=float,default=0.01)
@@ -51,6 +54,7 @@ def main():
         else:
             sess.run(tf.global_variables_initializer())
         if FLAGS.train:
+            print(tf.trainable_variables())
             logger.info("Training")
             max_epoch = epoch + FLAGS.epoch
             for epoch in range(epoch,max_epoch):
@@ -111,8 +115,7 @@ if __name__ == '__main__':
     
     train_labels = data.load_MNIST_labels(FLAGS.data_dir)
     test_labels  = data.load_MNIST_labels(FLAGS.data_dir,True)
-    #TODO setting model name with hyperparameter
-    
+    #TODO setting model name with hyperparameter IF not default 
     #setting up logger
     logger = logging.getLogger(FLAGS.name)
     logger.setLevel(logging.INFO)

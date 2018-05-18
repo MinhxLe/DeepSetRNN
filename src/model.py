@@ -41,6 +41,7 @@ class BasicRNNClassifier(object):
     @property
     def model_dir(self):
         #TODO add hyperparameters
+        #TODO add model name
         return self.config.name
 
 class DeepSetRNNClassifier(object):
@@ -55,6 +56,7 @@ class DeepSetRNNClassifier(object):
             self.y = tf.placeholder(tf.int32,[config.batch_size]) 
             lstm_cell = BasicDeepSetLSTMCell(config.hidden_size,forget_bias=1.0)
             rnn_outputs,states = rnn.static_rnn(lstm_cell,X,dtype=tf.float32)
+            #TODO make this also a deepset(?)
             output = linear(rnn_outputs[-1],config.output_size)
             #prediction
             self._prediction = tf.nn.softmax(output)
@@ -66,6 +68,7 @@ class DeepSetRNNClassifier(object):
                     learning_rate=config.learning_rate,\
                     momentum=config.momentum,\
                     use_nesterov=True)
+            
             self._optimize = optimizer.minimize(self._loss)
 
     @property

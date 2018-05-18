@@ -84,33 +84,6 @@ class BasicDeepSetLSTMCell(RNNCell):
     def output_size(self):
         return self._num_units
 
-    def _deepset_linear(args,output_size,bias,bias_start=0.0,scope=None):
-        if args is None:
-            raise ValueError("`args must be specified`")
-        shape = args.get_shape().as_list()
-        if len(shape) != 2:
-            raise ValueError("Linear is expecting 2D arguments: %s" % str(shape))
-        if not shape[0]:
-            raise ValueError("Linear expects shape[0] of arguments: %s" % str(shape))
-        if not shape[1]:
-            raise ValueError("Linear expects shape[1] of arguments: %s" % str(shape))
-        set_size = shape[0]
-        input_size = shape[1]
-        dtype = args.dtype
-        with vs.variable_scope(scope or "Deepset_Linear"):
-            lambda_matrix = vs.get_variable("lambda",[input_size,output_size],dtype=dtype)
-            alpha_matrix = vs.get_variable("alpha",[input_size,output_size],dtype=dtype)
-
-            alpha_mult = math_ops.matmul(args,alpha_matrix)
-            lambda_mult = math_ops.matmul(args,lambda_matrix)
-            res = lambda_mult + math_ops.reduce_sum(alpha_mult,axis=0,keepdims=True)
-            if not bias:
-                return res
-            bias_term = vs.get_variable("Bias", [output_size], dtype=dtype,\
-                    initializer=init_ops.constant_initializer(\
-                        bias_start, dtype=dtype))
-            return res + bias_term
-
     def build(self, inputs_shape):
 
         if inputs_shape[0].value is None:
@@ -123,10 +96,11 @@ class BasicDeepSetLSTMCell(RNNCell):
         input_depth = inputs_shape[1].value
         h_depth = self._num_units
 
+        #initializing alpha to zero
         self._alpha_kernel = self.add_variable(
                 "alpha"+_WEIGHTS_VARIABLE_NAME,
-                shape=[input_depth + h_depth, 4 * self._num_units])
-    
+                shape=[input_depth + h_depth, 4 * self._num_units],
+                initializer=init_ops.zeros_initializer(dtype=self.dtype))
 
         self._lambda_kernel = self.add_variable(
                 "lambda"+_WEIGHTS_VARIABLE_NAME,
@@ -166,10 +140,10 @@ class BasicDeepSetLSTMCell(RNNCell):
 
         #TODO this does not enforce batch size restriction(?)
         lambda_inputs = math_ops.matmul(concat_inputs, self._lambda_kernel)
-        alpha_inputs = math_ops.reduce_sum(math_ops.matmul(concat_inputs, self._lambda_kernel)\
-                ,axis=0,keepdims=True)
-        #gate_inputs = math_ops.add(lambda_inputs,alpha_inputs)
-        gate_inputs = lambda_inputs
+        alpha_inputs = math_ops.reduce_mean(math_ops.matmul(concat_inputs,\
+                self._lambda_kernel),axis=0,keepdims=True)
+        gate_inputs = math_ops.add(lambda_inputs,alpha_inputs)
+        #gate_inputs = lambda_inputs
         gate_inputs = nn_ops.bias_add(gate_inputs, self._bias)
 
         # i = input_gate, j = new_input, f = forget_gate, o = output_gate
