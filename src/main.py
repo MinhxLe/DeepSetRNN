@@ -1,14 +1,14 @@
 import os
 import numpy as np
 import tensorflow as tf
-from model import BasicRNNClassifier
+from model import BasicRNNClassifier,DeepSetRNNClassifier
 import data
 import argparse
 import logging
 ####FLAGS####
 ap = argparse.ArgumentParser()
 #model args
-ap.add_argument('--name',type=str,default="BasicRNN")
+ap.add_argument('--name',type=str,default="DeepSetRNN")
 ap.add_argument('--input_size',type=int,default=28)
 #TODO compute this or make it not static
 ap.add_argument('--timesteps',type=int,default=28) 
@@ -17,7 +17,7 @@ ap.add_argument('--output_size',type=int,default=10)
 #training args
 ap.add_argument('--load',type=bool,default=False)
 ap.add_argument('--train',type=bool,default=True)
-ap.add_argument('--epoch',type=int,default=100)
+ap.add_argument('--epoch',type=int,default=10)
 ap.add_argument('--batch_size',type=int,default=100)
 ap.add_argument('--save_freq',type=int,default=10)
 #hyperparameters
@@ -29,9 +29,9 @@ ap.add_argument('--debug',type=bool,default=False)
 ap.add_argument('--log',type=bool,default=True)
 #directory
 #dir flags
-ap.add_argument('--models_dir',type=str,default='../model')
-ap.add_argument('--logs_dir',type=str,default="../log")
-ap.add_argument('--data_dir',type=str,default='../data')
+ap.add_argument('--models_dir',type=str,default='./model')
+ap.add_argument('--logs_dir',type=str,default="./log")
+ap.add_argument('--data_dir',type=str,default='./data')
 
 
 def main():
@@ -39,7 +39,7 @@ def main():
     ckpt_dir = os.path.join(FLAGS.models_dir,FLAGS.name)
     model_fname = os.path.join(ckpt_dir,FLAGS.name)
     with tf.Session() as sess:
-        model = BasicRNNClassifier(FLAGS)
+        model = DeepSetRNNClassifier(FLAGS)
         saver = tf.train.Saver()
         epoch = 0
         #loading existing model in if need be

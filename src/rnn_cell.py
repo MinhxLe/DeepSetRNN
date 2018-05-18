@@ -1,0 +1,193 @@
+from tensorflow.python.eager import context
+from tensorflow.python.framework import constant_op
+from tensorflow.python.framework import dtypes
+from tensorflow.python.framework import ops
+from tensorflow.python.framework import tensor_shape
+from tensorflow.python.framework import tensor_util
+from tensorflow.python.layers import base as base_layer
+from tensorflow.python.ops import array_ops
+from tensorflow.python.ops import clip_ops
+from tensorflow.python.ops import init_ops
+from tensorflow.python.ops import math_ops
+from tensorflow.python.ops import nn_ops
+from tensorflow.python.ops import partitioned_variables
+from tensorflow.python.ops import random_ops
+from tensorflow.python.ops import tensor_array_ops
+from tensorflow.python.ops import variable_scope as vs
+from tensorflow.python.ops import variables as tf_variables
+from tensorflow.python.platform import tf_logging as logging
+from tensorflow.python.util import nest
+from tensorflow.contrib.rnn import LSTMStateTuple, RNNCell
+
+_BIAS_VARIABLE_NAME = "bias"
+_WEIGHTS_VARIABLE_NAME = "kernel"
+
+class BasicDeepSetLSTMCell(RNNCell):
+    """Basic LSTM recurrent network cell.
+  The implementation is based on: http://arxiv.org/abs/1409.2329.
+  We add forget_bias (default: 1) to the biases of the forget gate in order to
+  reduce the scale of forgetting in the beginning of the training.
+  It does not allow cell clipping, a projection layer, and does not
+  use peep-hole connections: it is the basic baseline.
+  For advanced models, please use the full @{tf.nn.rnn_cell.LSTMCell}
+  that follows.
+  """
+
+    def __init__(self,
+            num_units,
+            forget_bias=1.0,
+            state_is_tuple=True,
+            activation=None,
+            reuse=None,
+            name=None,
+            dtype=None):
+        """Initialize the basic LSTM cell.
+        Args:
+        num_units: int, The number of units in the LSTM cell.
+        forget_bias: float, The bias added to forget gates (see above).
+            Must set to `0.0` manually when restoring from CudnnLSTM-trained
+            checkpoints.
+        state_is_tuple: If True, accepted and returned states are 2-tuples of
+            the `c_state` and `m_state`.  If False, they are concatenated
+            along the column axis.  The latter behavior will soon be deprecated.
+        activation: Activation function of the inner states.  Default: `tanh`.
+        reuse: (optional) Python boolean describing whether to reuse variables
+            in an existing scope.  If not `True`, and the existing scope already has
+            the given variables, an error is raised.
+        name: String, the name of the layer. Layers with the same name will
+            share weights, but to avoid mistakes we require reuse=True in such
+            cases.
+        dtype: Default dtype of the layer (default of `None` means use the type
+            of the first input). Required when `build` is called before `call`.
+        When restoring from CudnnLSTM-trained checkpoints, must use
+        `CudnnCompatibleLSTMCell` instead.
+        """
+        super(BasicDeepSetLSTMCell, self).__init__(_reuse=reuse, name=name, dtype=dtype)
+        if not state_is_tuple:
+            logging.warn("%s: Using a concatenated state is slower and will soon be "
+                    "deprecated.  Use state_is_tuple=True.", self)
+
+            # Inputs must be 2-dimensional.
+        self.input_spec = base_layer.InputSpec(ndim=2)
+
+        self._num_units = num_units
+        self._forget_bias = forget_bias
+        self._state_is_tuple = state_is_tuple
+        self._activation = activation or math_ops.tanh
+
+    @property
+    def state_size(self):
+        return (LSTMStateTuple(self._num_units, self._num_units)
+                if self._state_is_tuple else 2 * self._num_units)
+
+    @property
+    def output_size(self):
+        return self._num_units
+
+    def _deepset_linear(args,output_size,bias,bias_start=0.0,scope=None):
+        if args is None:
+            raise ValueError("`args must be specified`")
+        shape = args.get_shape().as_list()
+        if len(shape) != 2:
+            raise ValueError("Linear is expecting 2D arguments: %s" % str(shape))
+        if not shape[0]:
+            raise ValueError("Linear expects shape[0] of arguments: %s" % str(shape))
+        if not shape[1]:
+            raise ValueError("Linear expects shape[1] of arguments: %s" % str(shape))
+        set_size = shape[0]
+        input_size = shape[1]
+        dtype = args.dtype
+        with vs.variable_scope(scope or "Deepset_Linear"):
+            lambda_matrix = vs.get_variable("lambda",[input_size,output_size],dtype=dtype)
+            alpha_matrix = vs.get_variable("alpha",[input_size,output_size],dtype=dtype)
+
+            alpha_mult = math_ops.matmul(args,alpha_matrix)
+            lambda_mult = math_ops.matmul(args,lambda_matrix)
+            res = lambda_mult + math_ops.reduce_sum(alpha_mult,axis=0,keepdims=True)
+            if not bias:
+                return res
+            bias_term = vs.get_variable("Bias", [output_size], dtype=dtype,\
+                    initializer=init_ops.constant_initializer(\
+                        bias_start, dtype=dtype))
+            return res + bias_term
+
+    def build(self, inputs_shape):
+
+        if inputs_shape[0].value is None:
+            raise ValueError("Expected inputs.shape[0] to be known, saw shape: %s"\
+                    % inputs_shape)
+        if inputs_shape[1].value is None:
+            raise ValueError("Expected inputs.shape[-1] to be known, saw shape: %s"\
+                    % inputs_shape)
+
+        input_depth = inputs_shape[1].value
+        h_depth = self._num_units
+
+        self._alpha_kernel = self.add_variable(
+                "alpha"+_WEIGHTS_VARIABLE_NAME,
+                shape=[input_depth + h_depth, 4 * self._num_units])
+    
+
+        self._lambda_kernel = self.add_variable(
+                "lambda"+_WEIGHTS_VARIABLE_NAME,
+                shape=[input_depth + h_depth, 4 * self._num_units])
+        
+        self._bias = self.add_variable(
+                _BIAS_VARIABLE_NAME,
+                shape=[4 * self._num_units],
+                initializer=init_ops.zeros_initializer(dtype=self.dtype))
+
+        self.built = True
+
+    def call(self, inputs, state):
+        """Long short-term memory cell (LSTM).
+        Args:
+        inputs: `2-D` tensor with shape `[batch_size, input_size]`.
+        state: An `LSTMStateTuple` of state tensors, each shaped
+            `[batch_size, num_units]`, if `state_is_tuple` has been set to
+            `True`.  Otherwise, a `Tensor` shaped
+            `[batch_size, 2 * num_units]`.
+        Returns:
+        A pair containing the new hidden state, and the new state (either a
+            `LSTMStateTuple` or a concatenated state, depending on
+            `state_is_tuple`).
+        """
+        sigmoid = math_ops.sigmoid
+        one = constant_op.constant(1, dtype=dtypes.int32)
+        # Parameters of gates are concatenated into one multiply for efficiency.
+        if self._state_is_tuple:
+            c, h = state
+        else:
+            c, h = array_ops.split(value=state, num_or_size_splits=2, axis=one)
+
+
+
+        concat_inputs = array_ops.concat([inputs,h],1)
+
+        #TODO this does not enforce batch size restriction(?)
+        lambda_inputs = math_ops.matmul(concat_inputs, self._lambda_kernel)
+        alpha_inputs = math_ops.reduce_sum(math_ops.matmul(concat_inputs, self._lambda_kernel)\
+                ,axis=0,keepdims=True)
+        #gate_inputs = math_ops.add(lambda_inputs,alpha_inputs)
+        gate_inputs = lambda_inputs
+        gate_inputs = nn_ops.bias_add(gate_inputs, self._bias)
+
+        # i = input_gate, j = new_input, f = forget_gate, o = output_gate
+        i, j, f, o = array_ops.split(
+                value=gate_inputs, num_or_size_splits=4, axis=one)
+
+        forget_bias_tensor = constant_op.constant(self._forget_bias, dtype=f.dtype)
+        # Note that using `add` and `multiply` instead of `+` and `*` gives a
+        # performance improvement. So using those at the cost of readability.
+        add = math_ops.add
+        multiply = math_ops.multiply
+        new_c = add(multiply(c, sigmoid(add(f, forget_bias_tensor))),
+                multiply(sigmoid(i), self._activation(j)))
+        new_h = multiply(self._activation(new_c), sigmoid(o))
+
+        if self._state_is_tuple:
+            new_state = LSTMStateTuple(new_c, new_h)
+        else:
+            new_state = array_ops.concat([new_c, new_h], 1)
+        return new_h, new_state
+
