@@ -36,6 +36,7 @@ class BasicDeepSetLSTMCell(RNNCell):
     def __init__(self,
             num_units,
             forget_bias=1.0,
+            alpha_contrib=1,
             state_is_tuple=True,
             activation=None,
             reuse=None,
@@ -74,7 +75,7 @@ class BasicDeepSetLSTMCell(RNNCell):
         self._forget_bias = forget_bias
         self._state_is_tuple = state_is_tuple
         self._activation = activation or math_ops.tanh
-
+        self._alpha_contrib = alpha_contrib
     @property
     def state_size(self):
         return (LSTMStateTuple(self._num_units, self._num_units)
@@ -99,8 +100,8 @@ class BasicDeepSetLSTMCell(RNNCell):
         #initializing alpha to zero
         self._alpha_kernel = self.add_variable(
                 "alpha"+_WEIGHTS_VARIABLE_NAME,
-                shape=[input_depth + h_depth, 4 * self._num_units],
-                initializer=init_ops.zeros_initializer(dtype=self.dtype))
+                shape=[input_depth + h_depth, 4 * self._num_units])
+                #initializer=init_ops.zeros_initializer(dtype=self.dtype))
 
         self._lambda_kernel = self.add_variable(
                 "lambda"+_WEIGHTS_VARIABLE_NAME,
@@ -141,7 +142,8 @@ class BasicDeepSetLSTMCell(RNNCell):
         #TODO this does not enforce batch size restriction(?)
         lambda_inputs = math_ops.matmul(concat_inputs, self._lambda_kernel)
         alpha_inputs = math_ops.reduce_mean(math_ops.matmul(concat_inputs,\
-                self._lambda_kernel),axis=0,keepdims=True)
+                self._alpha_kernel),axis=0,keepdims=True)
+        alpha_inputs = math_ops.multiply(self._alpha_contrib,alpha_inputs)
         gate_inputs = math_ops.add(lambda_inputs,alpha_inputs)
         #gate_inputs = lambda_inputs
         gate_inputs = nn_ops.bias_add(gate_inputs, self._bias)
