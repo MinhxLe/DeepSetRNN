@@ -38,6 +38,7 @@ class BasicRNNClassifier(object):
     @property 
     def optimize(self):
         return self._optimize
+
 class DeepSetRNNClassifier(object):
     def __init__(self,config):
         self.config = config
@@ -78,4 +79,51 @@ class DeepSetRNNClassifier(object):
     @property 
     def optimize(self):
         return self._optimize
- 
+
+
+
+class BasicRNNSeq2Seq(object):
+    def __init__(self,config):
+        self.config = config
+        #TODO seperate out into functions 
+        with tf.variable_scope(config.name):
+            config = self.config
+            
+            self.X = tf.placeholder(tf.int32,\
+                    [None,config.timesteps,config.input_size])
+            X = tf.unstack(self.X,config.timesteps,1)
+            self.y = tf.placeholder(tf.int32,[None,config.timesteps]) 
+            lstm_cell = rnn.BasicLSTMCell(config.hidden_size,\
+                    num_proj=config.output_size,forget_bias=1.0)
+            rnn_outputs,states = rnn.static_rnn(lstm_cell,X,dtype=tf.float32)
+            
+            stackedOutputs = tf.stack(rnn_outputs,axis=1) 
+    #prediction
+            self._prediction = tf.nn.softmax(output) #last axis
+            #creating prediction mask to only account for predictions of 
+            #popultation 1=6
+            predictMask = tf.cast(tf.greater(self.y,0),tf.int8)
+            
+            #loss
+            loss = tf.losses
+            self._loss = tf.reduce_mean((tf.losses.sparse_softmax_cross_entropy(self.y,self._prediction)))
+            
+            
+            #optimizer
+            
+
+            #TODO can change optimizer 
+            optimizer = tf.train.MomentumOptimizer(\
+                    learning_rate=config.learning_rate,\
+                    momentum=config.momentum,\
+                    use_nesterov=True)
+            self._optimize = optimizer.minimize(self._loss)
+    @property
+    def prediction(self):
+        return self._prediction        
+    @property
+    def loss(self):
+        return self._loss
+    @property 
+    def optimize(self):
+        return self._optimize
