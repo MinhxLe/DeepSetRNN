@@ -101,17 +101,16 @@ class BasicRNNSeq2Seq(object):
     #prediction
             self._prediction = tf.nn.softmax(output) #last axis
             #creating prediction mask to only account for predictions of 
-            #popultation 1=6
-            predictMask = tf.cast(tf.greater(self.y,0),tf.int8)
-            
+            #population 1=6
+            predictMask = tf.greater(self.y,0)
+            labels = tf.subtract(self.y,1)
+            labels = tf.multiply(labels,predictMask)
+
             #loss
-            loss = tf.losses
-            self._loss = tf.reduce_mean((tf.losses.sparse_softmax_cross_entropy(self.y,self._prediction)))
-            
+            loss = tf.losses.sparse_softmax_cross_entropy(labels,rnn_outputs,weights=predictMask)
+            self._loss = tf.reduce_mean(loss) 
             
             #optimizer
-            
-
             #TODO can change optimizer 
             optimizer = tf.train.MomentumOptimizer(\
                     learning_rate=config.learning_rate,\
