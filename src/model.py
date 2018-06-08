@@ -94,10 +94,13 @@ class BasicRNNSeq2Seq(object):
             self.y = tf.placeholder(tf.int32,[None,config.timesteps]) 
             self.mask = tf.placeholder(tf.bool, [None,config.timesteps])
             
-            lstm_cell = rnn.LSTMCell(config.hidden_size,\
-                    num_proj=config.output_size,forget_bias=1.0,\
+            lstm_cell1 = rnn.LSTMCell(config.hidden_size//2,forget_bias=1.0,\
                     activation=tf.nn.softsign)
             
+            lstm_cell2 = rnn.LSTMCell(config.hidden_size,\
+                    num_proj=config.output_size,forget_bias=1.0,\
+                    activation=tf.nn.softsign)
+            lstm_cell = rnn.MultiRNNCell([lstm_cell1,lstm_cell2])
             rnn_outputs,states = tf.nn.dynamic_rnn(lstm_cell,self.X,dtype=tf.float32)
             
             #prediction
