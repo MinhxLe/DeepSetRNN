@@ -56,3 +56,4 @@ def iterate_minibatches(inputs,outputs, batch_size, shuffle=False):
         yield inputs[excerpt],outputs[excerpt]
 
 
+

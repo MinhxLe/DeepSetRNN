@@ -89,27 +89,25 @@ class BasicRNNSeq2Seq(object):
         with tf.variable_scope(config.name):
             config = self.config
             
-            self.X = tf.placeholder(tf.int32,\
+            self.X = tf.placeholder(tf.float32,\
                     [None,config.timesteps,config.input_size])
-            X = tf.unstack(self.X,config.timesteps,1)
             self.y = tf.placeholder(tf.int32,[None,config.timesteps]) 
-            lstm_cell = rnn.BasicLSTMCell(config.hidden_size,\
-                    num_proj=config.output_size,forget_bias=1.0)
-            rnn_outputs,states = rnn.static_rnn(lstm_cell,X,dtype=tf.float32)
+            self.mask = tf.placeholder(tf.bool, [None,config.timesteps])
             
-            stackedOutputs = tf.stack(rnn_outputs,axis=1) 
-    #prediction
-            self._prediction = tf.nn.softmax(output) #last axis
-            #creating prediction mask to only account for predictions of 
-            #population 1=6
-            predictMask = tf.greater(self.y,0)
-            labels = tf.subtract(self.y,1)
-            labels = tf.multiply(labels,predictMask)
-
+            lstm_cell = rnn.LSTMCell(config.hidden_size,\
+                    num_proj=config.output_size,forget_bias=1.0,\
+                    activation=tf.nn.softsign)
+            
+            rnn_outputs,states = tf.nn.dynamic_rnn(lstm_cell,self.X,dtype=tf.float32)
+            
+            #prediction
+            self._prediction = tf.nn.softmax(rnn_outputs) #last axis
+            labels = tf.boolean_mask(self.y,self.mask)
+            labels = tf.multiply(self.y, tf.cast(self.mask,self.y.dtype))
             #loss
-            loss = tf.losses.sparse_softmax_cross_entropy(labels,rnn_outputs,weights=predictMask)
+            loss = tf.losses.sparse_softmax_cross_entropy(labels,rnn_outputs)
+            loss = tf.multiply(loss,tf.cast(self.mask,loss.dtype))
             self._loss = tf.reduce_mean(loss) 
-            
             #optimizer
             #TODO can change optimizer 
             optimizer = tf.train.MomentumOptimizer(\
