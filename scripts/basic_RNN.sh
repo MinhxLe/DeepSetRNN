@@ -8,7 +8,7 @@
 
 SGE_TASK_ID=1
 
-source /u/logcal/Modules/default/init/modules.sh
+source /u/local/Modules/default/init/modules.sh
 module load python/3.6.1
 
 for i in {1..200}
