@@ -1,26 +1,29 @@
 import os
-import constants
+from src.data import constants
 
 DATA_DIR = 'sos-tags-math-sx'
 FNAME = 'tags-math-sx-seqs.txt' 
 RAW_DATA_FNAME = os.path.join(constants.RAW_PATH, DATA_DIR, FNAME) 
 
 
-_N_ELEMENTS = 1650
-
-def get_sequence():
+N_ELEMENTS = 1664
+def get_sequences():
     sequences = []
     with open(RAW_DATA_FNAME) as f:
         for line in f:
             sizes, elements = line.split(';')
+            sizes = sizes.split(',') 
+            elements = elements.split(',') 
             
             sequence = []
             sizes = list(map(int, sizes))
             elements = list(map(int, elements))
             idx = 0
             for size in sizes:
-                sequence.append(elements[idx:idx+size])
+                curr_set = elements[idx:idx+size]
+                #turing 1idx to 0idx
+                curr_set = [i-1 for i in curr_set]
+                sequence.append(curr_set)
                 idx += size
             sequences.append(sequence)
     return sequences
-
