@@ -41,13 +41,13 @@ def generate_embedding(
             n_data = len(data)
             
             #one hot encoding matrix
-            one_hot = np.zeros((n_class, n_data))
-            one_hot[data,[i for i in range(n_data)]] = 1
-            one_hot = torch.from_numpy(one_hot).float()
+            # one_hot = np.zeros((n_class, n_data))
+            # one_hot[data,[i for i in range(n_data)]] = 1
+            # one_hot = torch.from_numpy(one_hot).float()
         
             y_true = torch.tensor(target).long()
 
-            z1 = torch.matmul(W1, one_hot)
+            z1 = W1[:,data]
             z2 = torch.matmul(W2, z1)
             
 
