@@ -27,3 +27,13 @@ def get_sequences():
                 idx += size
             sequences.append(sequence)
     return sequences
+
+LABELS_FNAME = os.path.join(constants.RAW_PATH, DATA_DIR, 'tags-math-sx-element-labels.txt')
+
+def get_labels():
+    labels = []
+    with open(LABELS_FNAME) as f:
+        for line in f:
+            labels.append(line.split(' ')[1].rstrip())
+    return labels
+    
