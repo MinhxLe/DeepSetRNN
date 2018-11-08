@@ -23,7 +23,6 @@ def generate_embedding(
         pair_data,
         n_class,
         embedding_dims = 5,
-        batch_size = 500,
         learning_rate = 0.001,
         n_epoch=100):
     """
@@ -35,24 +34,17 @@ def generate_embedding(
     W2 = Variable(torch.randn(n_class, embedding_dims).float(), requires_grad=True)
         
     for epoch in range(n_epoch):
-        for batch in utils.generate_batch(pair_data,batch_size):
-            
-            data, target = zip(*batch)
-            n_data = len(data)
-            
-            #one hot encoding matrix
-            # one_hot = np.zeros((n_class, n_data))
-            # one_hot[data,[i for i in range(n_data)]] = 1
-            # one_hot = torch.from_numpy(one_hot).float()
-        
-            y_true = torch.tensor(target).long()
+        total_loss = 0
+        for data, target in pair_data:
+            y_true = torch.tensor([target]).long()
 
             z1 = W1[:,data]
             z2 = torch.matmul(W2, z1)
             
+            log_softmax = F.log_softmax(z2, dim=0)
 
-            log_softmax = F.log_softmax(z2, dim=1)
-            loss = F.nll_loss(log_softmax.t(), y_true)
+            loss = F.nll_loss(log_softmax.view(1,-1), y_true)
+            total_loss += loss.data
 
             loss.backward()
             W1.data -= learning_rate*W1.grad.data 

@@ -38,6 +38,6 @@ class SetSequenceModel(nn.Module):
             # Refer to the Pytorch documentation to see exactly
             # why they have this dimensionality.
             # The axes semantics are (num_layers, minibatch_size, hidden_dim)
-            return (torch.zeros(1, 1, self.hidden_dim),
-                    torch.zeros(1, 1, self.hidden_dim))
+            return (torch.zeros(2, 1, self.hidden_dim),
+                    torch.zeros(2, 1, self.hidden_dim))
 
