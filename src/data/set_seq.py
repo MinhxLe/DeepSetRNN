@@ -11,6 +11,34 @@ import logging
 
 _LOGGER = logging.getLogger("set_seq")
 
+def get_sequences(fname):
+    sequences = []
+    with open(fname) as f:
+        for line in f:
+            sizes, elements = line.split(';')
+            sizes = sizes.split(',') 
+            elements = elements.split(',') 
+            
+            sequence = []
+            sizes = list(map(int, sizes))
+            elements = list(map(int, elements))
+            idx = 0
+            for size in sizes:
+                curr_set = elements[idx:idx+size]
+                #turing 1idx to 0idx
+                curr_set = [i-1 for i in curr_set]
+                sequence.append(curr_set)
+                idx += size
+            sequences.append(sequence)
+    return sequences
+
+def get_labels(fname):
+    labels = []
+    with open(fname) as f:
+        for line in f:
+            labels.append(line.split(' ')[1].rstrip())
+    return labels
+  
 def one_hot(element_idxs, n_class):
     x = np.zeros(n_class, element_idxs)
 
