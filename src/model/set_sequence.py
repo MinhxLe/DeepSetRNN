@@ -21,7 +21,7 @@ class SetSequenceModel(nn.Module):
         else:
             self.embedding = nn.Embedding(n_class, embedding_dim)
         #TODO multipl layers, dropout
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, bidirectional=True)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim)
         #prediction
         self.output = nn.Linear(hidden_dim, n_class)
         self.hidden = self.init_hidden()
@@ -38,6 +38,6 @@ class SetSequenceModel(nn.Module):
             # Refer to the Pytorch documentation to see exactly
             # why they have this dimensionality.
             # The axes semantics are (num_layers, minibatch_size, hidden_dim)
-            return (torch.zeros(2, 1, self.hidden_dim),
-                    torch.zeros(2, 1, self.hidden_dim))
+            return (torch.zeros(1, 1, self.hidden_dim),
+                    torch.zeros(1, 1, self.hidden_dim))
 
