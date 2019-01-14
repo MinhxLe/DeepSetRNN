@@ -2,6 +2,7 @@
 data/*
 logs/*
 external/*
+log/*
 model/*
 *.swp
 *.swo
