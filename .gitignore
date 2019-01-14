@@ -1,6 +1,7 @@
 .idea/*
 data/*
-log/*
+logs/*
+external/*
 model/*
 *.swp
 *.swo

@@ -57,7 +57,7 @@ def generate_embedding(
     """
 
     #this is stochastic gradient descent
-    
+    _LOGGER.info("generating embedding for {} classes".format(n_class))
     W1 = Variable(torch.randn(embedding_dims,n_class).float(), requires_grad=True)
     W2 = Variable(torch.randn(n_class, embedding_dims).float(), requires_grad=True)
         

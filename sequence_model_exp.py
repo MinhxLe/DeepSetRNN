@@ -4,53 +4,44 @@
 # In[28]:
 
 
-from src.data import school_contact, set_seq, math_tags
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import logging
-import os
+import os, sys
 import importlib
 
+from src.data import school_contact, set_seq, math_tags
+from src.model.set_sequence import SetSequenceModel
 
-# In[21]:
-
-
-logging.info("starting logger")
 _LOGGER = logging.getLogger('seq_model')
-_LOGGER.setLevel(logging.DEBUG)
+_LOGGER.setLevel(logging.INFO)
 
-
-# In[33]:
-
+_LOGGER.addHandler(logging.FileHandler('logs/math_tags_seq_model.txt'))
+_LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
 data_name = 'school_contact'
+_LOGGER.info("running seq model on {}".format(data_name))
 data_module = importlib.import_module('src.data.{}'.format(data_name))
 full_seq_path = os.path.join('data/raw/', data_module.DIR_NAME, data_module.FNAME)
 sequences = set_seq.get_sequences(full_seq_path)
 
 
-# In[34]:
-
-
-#pretraining embedding
+#pretraining embeddings
+_LOGGER.info("generating embedding")
+EMBEDDING_DIM = 5 
 pairs = []
 for sequence in sequences:
     for seq_set in sequence:
         for i in range(len(seq_set)):
             for j in range(i+1, len(seq_set)):
                 pairs.append((seq_set[i],seq_set[j]))
-EMBEDDING_DIM = 5 
 W1,W2 = set_seq.generate_embedding(pairs, school_contact.N_ELEMENTS, embedding_dims=EMBEDDING_DIM, n_epoch=10)
 W = W1.t().data+W2.data
 W_norm = W.div(torch.norm(W,dim=1).view(-1,1))
 torch.save(W_norm, 'data/processed/{}_embedding_normalized_d{}.pt'.format(data_name, EMBEDDING_DIM))
-
-
-# In[46]:
-
 
 #getting 1 hot representation of sequences
 #for each sequence with length N, you will have a corresponding tensor with shaep N by N_ELEMENTS representing set of sequences
@@ -58,25 +49,14 @@ one_hot_sequences = []
 for sequence in sequences:
     one_hot_sequences.append(torch.cat([torch.zeros(1, data_module.N_ELEMENTS, dtype=torch.float).     scatter(1, torch.LongTensor(elm_set).view(1,-1), 1) for elm_set in sequence]))
 
-
-# In[56]:
-
-
-from src.model.set_sequence import SetSequenceModel
-
-embedding = W_norm
 HIDDEN_DIM = 100
-EMBEDDING_DIM = 5
 model = SetSequenceModel(hidden_dim=HIDDEN_DIM,
                          n_class=data_module.N_ELEMENTS,
-                         embedding=embedding)
+                         embedding=W_norm)
 
-
-# In[57]:
-
-
-n_epoch = 50
-n_seq = 100
+#Training
+n_epoch = 20
+n_seq = len(sequences)
 
 split = int(n_seq*0.8)
 train_sequences = sequences[:split]
@@ -89,21 +69,13 @@ loss_fn = nn.BCEWithLogitsLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=.9)
 
 
-# In[58]:
-
-
 test_losses = []
 for sequence, target in zip(test_sequences, test_targets):
     model.hidden = model.init_hidden()
     logits = model(sequence)
     loss = loss_fn(logits[1:].view(-1),target[1:].view(-1))
     test_losses.append(loss.data)
-_LOGGER.info("Validation Loss: {}".format(np.mean(test_losses)))
-
-
-# In[ ]:
-
-
+_LOGGER.info("Initial Validation Loss: {}".format(np.mean(test_losses)))
 optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=.9)
 losses = []
 
@@ -121,11 +93,7 @@ for epoch in range(n_epoch):
         optimizer.step()
     mean_loss = np.mean(curr_losses)
     losses.append(mean_loss)
-    _LOGGER.debug("epoch {}: {}".format(epoch, mean_loss))
-
-
-# In[64]:
-
+    _LOGGER.info("epoch {}: {}".format(epoch, mean_loss))
 
 test_losses = []
 for sequence, target in zip(test_sequences, test_targets):
@@ -133,37 +101,8 @@ for sequence, target in zip(test_sequences, test_targets):
     logits = model(sequence)
     loss = loss_fn(logits[1:].view(-1),target[1:].view(-1))
     test_losses.append(loss.data)
-_LOGGER.info("Validation Loss: {}".format(np.mean(test_losses)))
+_LOGGER.info("Final Validation Loss: {}".format(np.mean(test_losses)))
 
 
-# In[68]:
-
-
-i = 10
-logits = model(test_sequences[i])
-prediction = torch.sigmoid(model(test_sequences[i]))
-
-
-# In[69]:
-
-
-print(test_sequences[i])
-
-
-# In[70]:
-
-
-np.argsort(prediction.data.numpy(),axis=1)[:,:1650:-1]
-
-
-# In[52]:
-
-
-np.max(prediction.data.numpy())
-
-
-# In[ ]:
-
-
-
-
+#saving embedding and model
+torch.save(model.state_dict(), "model/{}_set_seq.mdl".format(data_name))
