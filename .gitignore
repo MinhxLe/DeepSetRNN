@@ -1,9 +1,12 @@
+dump/*
 .idea/*
 data/*
 logs/*
 external/*
 log/*
 model/*
+logs/*
+models/*
 *.swp
 *.swo
 */__pycache__/*
