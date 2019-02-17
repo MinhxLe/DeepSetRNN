@@ -13,3 +13,4 @@ models/*
 *.pyc
 .ipynb_checkpoints/*
 .venv/*
+figures/*

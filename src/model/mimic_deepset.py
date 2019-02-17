@@ -77,11 +77,12 @@ class FullyConnectedNetworkClassifier(nn.Module):
     def __init__(self,
             n_class,
             embedding,
-            hidden_dims=[100]
+            hidden_dims=[100],
+            freeze_embedding=True
             ):
-        self.n_class = n_class
         super(FullyConnectedNetworkClassifier, self).__init__()
-        self.embedding = nn.Embedding.from_pretrained(embedding, freeze=True)
+        self.n_class = n_class
+        self.embedding = nn.Embedding.from_pretrained(embedding, freeze=freeze_embedding)
         embedding_dim = embedding.size()[1]
         
         self.fc_layers = []
@@ -124,11 +125,12 @@ class FullyConnectedNetworkClassifier(nn.Module):
 class EmbeddedLogRegClassifier(nn.Module):
     def __init__(self,
             n_class,
-            embedding):
+            embedding,
+            freeze_embedding=True):
         self.n_class = n_class
         super(EmbeddedLogRegClassifier, self).__init__()
         
-        self.embedding = nn.Embedding.from_pretrained(embedding, freeze=True)
+        self.embedding = nn.Embedding.from_pretrained(embedding, freeze=freeze_embedding)
         embedding_dim = embedding.size()[1]
         self.linear = nn.Linear(embedding_dim*2, n_class)
     
