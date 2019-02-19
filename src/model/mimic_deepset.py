@@ -2,15 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class SetSequenceModel(nn.Module):
+class EmbeddedSetLSTMClassifier(nn.Module):
     def __init__(self,
             hidden_dim,
             n_class,
             embedding=None,
             vocab_size=None,
             embedding_dim=None,
-            freeze_embedding=False):
-        super(SetSequenceModel, self).__init__()
+            freeze_embedding=False,
+            dropout=0.5):
+        super(EmbeddedSetLSTMClassifier, self).__init__()
         
         self.hidden_dim = hidden_dim[0]
         #getting embbedding
@@ -22,15 +23,15 @@ class SetSequenceModel(nn.Module):
             self.embedding = nn.Embedding(vocab_size, embedding_dim)
         #TODO multipl layers, dropout
         #*2 for concatination of diagnoses and embedding
-        self.lstm = nn.LSTM(embedding_dim*2, hidden_dim[0]) 
+        self.lstm = nn.LSTM(embedding_dim*2, hidden_dim[0], dropout=dropout) 
+        self.dropout_layer = nn.Dropout(p=dropout)
         #prediction
         self.hidden1 = nn.Linear(hidden_dim[0], hidden_dim[1])
         self.output = nn.Linear(hidden_dim[1], n_class)
-        self.hidden = self.init_hidden()
     
     def forward(self, set_sequence):
-        hidden = self.hidden
-        
+        #TODO is this right?
+        hidden = self.init_hidden() 
         diagnoses_sequence, procedures_sequence = zip(*set_sequence)
        
 
@@ -61,7 +62,7 @@ class SetSequenceModel(nn.Module):
         
         outputs, hidden = self.lstm(final_embeddings, hidden)
         
-        hidden1 = F.relu(self.hidden1(outputs.view(len(set_sequence), -1)))
+        hidden1 = F.relu(self.dropout_layer(self.hidden1(outputs.view(len(set_sequence), -1))))
         return self.output(hidden1)
 
     def init_hidden(self):

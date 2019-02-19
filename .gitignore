@@ -14,3 +14,4 @@ models/*
 .ipynb_checkpoints/*
 .venv/*
 figures/*
+.vscode/*

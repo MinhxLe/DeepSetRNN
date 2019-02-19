@@ -1,6 +1,19 @@
 import numpy as np
 from sklearn.utils import resample
 import scipy.stats as st
+import torch
+
+def to_tensor(obj):
+    if type(obj) == np.ndarray:
+        return torch.Tensor(obj)
+    else:
+        return obj
+
+def to_numpy(obj):
+    if type(obj) == torch.Tensor:
+        return obj.numpy()
+    else:
+        return obj
 
 
 def get_onehot_vector(elements, idx_map):
@@ -23,7 +36,8 @@ def precision_at_k(logits, true_outputs,k):
         true_output = true_output[1:]
         row_idx = np.sort(np.tile(np.arange(0, len(true_output)), k))
         top_k_idx = np.argsort(logit)[:,::-1][:,:k].flatten()
-        precisions.append(np.mean(true_output[row_idx, top_k_idx].numpy()))
+        
+        precisions.append(np.mean(to_numpy(true_output[row_idx, top_k_idx])))
     return np.mean(precisions)
 
 def bootstrap_CI(stat_fn, k_args, populations, n_bootstrap, confidence=0.95):

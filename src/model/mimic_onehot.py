@@ -58,10 +58,9 @@ class OneHotLSTMClassifier(nn.Module):
         self.lstm = nn.LSTM(input_dim, hidden_dims[0], num_layers=n_layers)
         self.hidden1 = nn.Linear(hidden_dims[0], hidden_dims[1])
         self.output = nn.Linear(hidden_dims[1], n_class)
-        self.hidden = self.init_hidden()
 
     def forward(self, sequence):
-        hidden = self.hidden
+        hidden = self.init_hidden()
         outputs, hidden = self.lstm(sequence, hidden)
         hidden1 = F.relu(self.hidden1(outputs.view(len(sequence), -1)))
         return self.output(hidden1)
