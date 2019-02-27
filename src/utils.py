@@ -29,7 +29,8 @@ def generate_batch(data, batch_size=500):
 
 def precision_at_k(logits, true_outputs,k):
 
-    precisions = []
+    count = 0 
+    total = 0
     for logit, true_output in zip(logits, true_outputs):
         #ignore first and last because it is not sensible
         logit = logit[:-1]
@@ -37,8 +38,12 @@ def precision_at_k(logits, true_outputs,k):
         row_idx = np.sort(np.tile(np.arange(0, len(true_output)), k))
         top_k_idx = np.argsort(logit)[:,::-1][:,:k].flatten()
         
-        precisions.append(np.mean(to_numpy(true_output[row_idx, top_k_idx])))
-    return np.mean(precisions)
+        temp = to_numpy(true_output[row_idx, top_k_idx])
+        
+        count += np.sum(temp)
+        total += len(true_output)
+        #precisions.append(np.mean(to_numpy(true_output[row_idx, top_k_idx])))
+    return count/(total*k)
 
 def bootstrap_CI(stat_fn, k_args, populations, n_bootstrap, confidence=0.95):
     statistics = []
