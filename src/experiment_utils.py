@@ -58,7 +58,7 @@ def evaluate_validation_loss_template(model,
     model = model.eval()
     test_losses = []
     #THIS IS NOT THAT GOOD TO DO FOR TEMPLATE PATTERN
-    for x, target in utils.generate_data_by_multi_idx(inputs, truth_outputs):
+    for x, target in zip(inputs, truth_ouputs):
         output = model(utils.to_tensor(x))
         loss = loss_fn(output, utils.to_tensor(target))
         test_losses.append(loss.data)
@@ -74,7 +74,7 @@ def train_model_template(model, loss_fn, optimizer, n_epoch,
     for epoch in range(n_epoch):
         curr_losses = []
         #THIS IS NOT THAT GOOD TO DO FOR TEMPLATE PATTERN
-        for x, truth_output in utils.generate_data_by_multi_idx(inputs, truth_outputs):
+        for x, truth_output in zip(inputs, truth_ouputs): 
             model.zero_grad()
             x = utils.to_tensor(x)
             logits = model(x)
