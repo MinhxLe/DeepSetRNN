@@ -20,7 +20,6 @@ class LSTMClassifier(nn.Module):
         self.dropout_layer = nn.Dropout(p=dropout)
 
     def forward(self, sequence):
-        sequence = utils.to_tensor(sequence)
         hidden = self.init_hidden()
         outputs, hidden = self.lstm(sequence.view(len(sequence), 1, -1), hidden)
         hidden1 = F.relu(self.dropout_layer(self.hidden1(outputs[-1])))

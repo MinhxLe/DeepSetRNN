@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 from sklearn.utils import resample
 import scipy.stats as st
@@ -6,12 +7,16 @@ import torch
 def to_tensor(obj):
     if type(obj) == np.ndarray:
         return torch.Tensor(obj)
+    if type(obj) == pd.core.frame.DataFrame:
+        return torch.Tensor(obj.values)
     else:
         return obj
 
 def to_numpy(obj):
     if type(obj) == torch.Tensor:
         return obj.numpy()
+    if type(obj) == pd.core.frame.DataFrame:
+        return obj.values
     else:
         return obj
 
@@ -52,3 +57,9 @@ def bootstrap_CI(stat_fn, k_args, populations, n_bootstrap, confidence=0.95):
         statistics.append(stat_fn(*samples, **k_args)) 
     
     return statistics, st.t.interval(confidence, len(statistics)-1, loc=np.mean(statistics), scale=st.sem(statistics))
+
+
+def generate_data_by_multi_idx(series_df, labels_df):
+    indices = set(series_df.index).intersection(set(labels_df.index))
+    for idx in indices:
+        yield series_df.xs(idx, level=[0,1]), labels_df.xs(idx, level=[0,1])

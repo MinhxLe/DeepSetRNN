@@ -57,11 +57,13 @@ def evaluate_validation_loss_template(model,
         truth_outputs):
     model = model.eval()
     test_losses = []
-    for x, target in zip(inputs, truth_outputs):
+    #THIS IS NOT THAT GOOD TO DO FOR TEMPLATE PATTERN
+    for x, target in utils.generate_data_by_multi_idx(inputs, truth_outputs):
         output = model(utils.to_tensor(x))
         loss = loss_fn(output, utils.to_tensor(target))
         test_losses.append(loss.data)
     return test_losses
+
 
 def train_model_template(model, loss_fn, optimizer, n_epoch,
         inputs, truth_outputs, logger = None):
@@ -71,7 +73,8 @@ def train_model_template(model, loss_fn, optimizer, n_epoch,
     training_losses = []
     for epoch in range(n_epoch):
         curr_losses = []
-        for x, truth_output in zip(inputs, truth_outputs):
+        #THIS IS NOT THAT GOOD TO DO FOR TEMPLATE PATTERN
+        for x, truth_output in utils.generate_data_by_multi_idx(inputs, truth_outputs):
             model.zero_grad()
             x = utils.to_tensor(x)
             logits = model(x)
