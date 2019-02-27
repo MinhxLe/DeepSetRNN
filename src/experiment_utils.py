@@ -49,3 +49,38 @@ def train_model(model, loss_fn, optimizer, n_epoch,
         if not logger is None:
             logger.info("epoch: {}, loss: {}".format(epoch, mean_loss))
     return training_losses
+
+
+def evaluate_validation_loss_template(model, 
+        loss_fn, 
+        inputs, 
+        truth_outputs):
+    model = model.eval()
+    test_losses = []
+    for x, target in zip(inputs, truth_outputs):
+        output = model(utils.to_tensor(x))
+        loss = loss_fn(output, utils.to_tensor(target))
+        test_losses.append(loss.data)
+    return test_losses
+
+def train_model_template(model, loss_fn, optimizer, n_epoch,
+        inputs, truth_outputs, logger = None):
+    model = model.train()
+    if not logger is None:
+        logger.debug("Training model")
+    training_losses = []
+    for epoch in range(n_epoch):
+        curr_losses = []
+        for x, truth_output in zip(inputs, truth_outputs):
+            model.zero_grad()
+            x = utils.to_tensor(x)
+            logits = model(x)
+            loss = loss_fn(logits, utils.to_tensor(truth_output))
+            curr_losses.append(loss.data)
+            loss.backward()
+            optimizer.step()
+        mean_loss = np.mean(curr_losses)
+        training_losses.append(mean_loss)
+        if not logger is None:
+            logger.info("Epoch: {}, loss: {}".format(epoch, mean_loss))
+    return training_losses

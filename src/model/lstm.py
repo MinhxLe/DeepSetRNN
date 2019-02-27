@@ -1,16 +1,16 @@
 import torch
 import torch.nn as nn
-import torch.nn.function as F
-
+import torch.nn.functional as F
+from src import utils
 
 class LSTMClassifier(nn.Module):
     def __init__(self,
             input_dim,
-            hidden_dims,
-            n_layers,
             n_class,
+            hidden_dims,
+            n_layers=1,
             dropout=0.5):
-        super(OneHotLSTMClassifier, self).__init__()
+        super(LSTMClassifier, self).__init__()
     
         self.hidden_dim = hidden_dims[0]
 
@@ -20,9 +20,10 @@ class LSTMClassifier(nn.Module):
         self.dropout_layer = nn.Dropout(p=dropout)
 
     def forward(self, sequence):
+        sequence = utils.to_tensor(sequence)
         hidden = self.init_hidden()
         outputs, hidden = self.lstm(sequence.view(len(sequence), 1, -1), hidden)
-        hidden1 = F.relu(self.dropout_layer(self.hidden1(outputs.view(len(sequence), -1))))
+        hidden1 = F.relu(self.dropout_layer(self.hidden1(outputs[-1])))
         return self.output(hidden1)
 
     def init_hidden(self):
