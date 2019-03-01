@@ -58,10 +58,10 @@ def evaluate_validation_loss_template(model,
     model = model.eval()
     test_losses = []
     #THIS IS NOT THAT GOOD TO DO FOR TEMPLATE PATTERN
-    for x, target in zip(inputs, truth_ouputs):
+    for x, target in zip(inputs, truth_outputs):
         output = model(utils.to_tensor(x))
         loss = loss_fn(output, utils.to_tensor(target))
-        test_losses.append(loss.data)
+        test_losses.append(loss.data.numpy())
     return test_losses
 
 
@@ -74,12 +74,12 @@ def train_model_template(model, loss_fn, optimizer, n_epoch,
     for epoch in range(n_epoch):
         curr_losses = []
         #THIS IS NOT THAT GOOD TO DO FOR TEMPLATE PATTERN
-        for x, truth_output in zip(inputs, truth_ouputs): 
+        for x, truth_output in zip(inputs, truth_outputs): 
             model.zero_grad()
             x = utils.to_tensor(x)
             logits = model(x)
             loss = loss_fn(logits, utils.to_tensor(truth_output))
-            curr_losses.append(loss.data)
+            curr_losses.append(loss.data.numpy())
             loss.backward()
             optimizer.step()
         mean_loss = np.mean(curr_losses)
@@ -87,3 +87,11 @@ def train_model_template(model, loss_fn, optimizer, n_epoch,
         if not logger is None:
             logger.info("Epoch: {}, loss: {}".format(epoch, mean_loss))
     return training_losses
+
+
+def generate_batch(iterable, batch_size=500, shuffle=False):
+    l = len(iterable)
+    for ndx, in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
+
+

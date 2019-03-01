@@ -58,8 +58,26 @@ def bootstrap_CI(stat_fn, k_args, populations, n_bootstrap, confidence=0.95):
     
     return statistics, st.t.interval(confidence, len(statistics)-1, loc=np.mean(statistics), scale=st.sem(statistics))
 
+def pad_sequences(sequences):
+    lens = [len(sequence) for sequence in sequences]
+    max_len = max(lens)
+
+    vector_shape = sequences[0][0].shape
+    padded_shape = tuple([len(sequences), max_len] + list(vector_shape))
+
+    padded_tensor = np.zeros(padded_shape)
+    for i,j in enumerate(sequences):
+        padded_tensor[i][0:len(j)] = j
+
+    return padded_tensor
 
 def generate_data_by_multi_idx(series_df, labels_df):
     indices = set(series_df.index).intersection(set(labels_df.index))
     for idx in indices:
         yield series_df.xs(idx, level=[0,1]), labels_df.xs(idx, level=[0,1])
+
+
+def generate_batch(iterable, batch_size=500, shuffle=False):
+    l = len(iterable)
+    for ndx in range(0, l, batch_size):
+        yield iterable[ndx:min(ndx + batch_size, l)]
