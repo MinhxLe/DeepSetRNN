@@ -17,7 +17,7 @@ docutils==0.14
 entrypoints==0.3
 gensim==3.6.0
 h5py==2.9.0
-html5lib==0.9999999
+html5lib==0.99999999
 idna==2.8
 ipykernel==5.1.0
 ipython==7.2.0
